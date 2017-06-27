@@ -25,14 +25,16 @@
   },
   "homepage": "https://github.com/SteamingMutt/DiscordFeedback#readme",
   "devDependencies": {
-    "eslint": "^3.12.2",
-    "eslint-config-standard": "^6.2.1",
+    "eslint": "^4.1.1",
+    "eslint-config-standard": "^10.2.1",
+    "eslint-plugin-import": "2.6.0",
+    "eslint-plugin-node": "5.1.0",
     "eslint-plugin-promise": "^3.4.0",
-    "eslint-plugin-standard": "^2.0.1"
+    "eslint-plugin-standard": "^3.0.1"
   },
   "dependencies": {
     "bugsnag": "^1.9.1",
-    "discordie": "^0.10.0",
+    "discordie": "^0.11.0",
     "html-entities": "^1.2.1",
     "require-directory": "^2.1.1",
     "rethinkdbdash": "^2.3.29",
