@@ -1,12 +1,14 @@
 {
     "extends": "standard",
-    "installedESLint": true,
-    "indent": ["error", 2],
     "plugins": [
         "standard",
-        "promise"
+        "promise",
+        "recommended"
     ],
     "env": {
         "node": true
+    },
+    "rules": {
+        "indent": ["error", 2]
     }
 }
