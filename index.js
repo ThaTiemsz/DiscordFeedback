@@ -11,8 +11,27 @@ const bot = new Discordie({
   autoReconnect: true
 })
 
+// Set a variable to distinquish where the errors are from on bugsnag
 var bugsnag = require('bugsnag')
-bugsnag.register(Config.discord.bugsnag)
+if (Config.debug === true) {
+  let releaseLocation = "development"
+  bugsnag.register(Config.discord.bugsnag, {
+  releaseStage: releaseLocation,
+  sendCode: true,
+  onUncaughtError: function (err) {
+    console.error(err.stack || err);
+  }
+})
+} else {
+  let releaseLocation = "production"
+  bugsnag.register(Config.discord.bugsnag, {
+  releaseStage: releaseLocation,
+  sendCode: true,
+  onUncaughtError: function (err) {
+    console.error(err.stack || err);
+  }
+})
+}
 
 const UVRegex = /https?:\/\/[\w.]+\/forums\/(\d{6,})-[\w-]+\/suggestions\/(\d{8,})(?:-[\w-]*)?/
 
