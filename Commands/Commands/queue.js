@@ -1,17 +1,14 @@
-var commands = []
+let commands = []
 const Dash = require('rethinkdbdash')
 const r = new Dash()
-var checker = require('../../Utils/access_checker')
-var logger = require('../../Utils/error_loggers')
-var genlog = require('../../Utils/generic_logger')
-var config = require('../../config.js')
-var bugsnag = require('bugsnag')
+const checker = require('../../Utils/access_checker')
+const logger = require('../../Utils/error_loggers')
+const genlog = require('../../Utils/generic_logger')
+const config = require('../../config.js')
 
-var dupeMap = new Map()
+const dupeMap = new Map()
 
-var UVRegex = /https?:\/\/[\w.]+\/forums\/(\d{6,})-[\w-]+\/suggestions\/(\d{8,})(?:-[\w-]*)?/
-
-bugsnag.register(config.discord.bugsnag)
+const UVRegex = /https?:\/\/[\w.]+\/forums\/(\d{6,})-[\w-]+\/suggestions\/(\d{8,})(?:-[\w-]*)?/
 
 commands.newCardInit = {
   internal: true,
@@ -32,7 +29,7 @@ commands.newCardInit = {
         id: '302138464986595339',
         name: 'upvote'
       })
-    }).catch(bugsnag.notify)
+    }).catch(logger.raven)
   }
 }
 
@@ -70,7 +67,7 @@ commands.chatVoteInit = {
           id: '302138464986595339',
           name: 'upvote'
         })
-      }).catch(bugsnag.notify)
+      }).catch(logger.raven)
     })
   }
 }
@@ -227,7 +224,7 @@ commands.dupe = {
                           name: 'reverse',
                           id: '322646981476614144'
                         })
-                      }).catch(bugsnag.notify)
+                      }).catch(logger.raven)
                     })
                   }
                 })
@@ -264,7 +261,7 @@ commands.dupe = {
           })
         })
       }
-    }).catch(bugsnag.notify)
+    }).catch(logger.raven)
   }
 }
 
@@ -413,7 +410,7 @@ commands.registerVote = {
             })
           })
         }
-        r.db('DFB').table('queue').get(doc.id).update(doc).run().catch(bugsnag.notify)
+        r.db('DFB').table('queue').get(doc.id).update(doc).run().catch(logger.raven)
         break
       }
       case 'newCard': {
@@ -510,7 +507,7 @@ commands.registerVote = {
             })
           })
         }
-        r.db('DFB').table('queue').get(doc.id).update(doc).run().catch(bugsnag.notify)
+        r.db('DFB').table('queue').get(doc.id).update(doc).run().catch(logger.raven)
         break
       }
       case 'adminReviewDelete': {
@@ -593,7 +590,7 @@ commands.registerVote = {
             setTimeout(() => bot.Messages.deleteMessages([o.id, msg.id], bot.Channels.find(c => c.name === 'admin-queue').id), config.timeouts.messageDelete)
           })
           deleteFromUV(doc.UvId, uv, bot)
-          r.db('DFB').table('queue').get(doc.id).delete().run().catch(bugsnag.notify)
+          r.db('DFB').table('queue').get(doc.id).delete().run().catch(logger.raven)
         }
         break
       }
@@ -621,7 +618,7 @@ commands.registerVote = {
               message: body
             }, e)
           })
-          r.db('DFB').table('queue').get(doc.id).delete().run().catch(bugsnag.notify)
+          r.db('DFB').table('queue').get(doc.id).delete().run().catch(logger.raven)
         } else if (reaction.id === '322646981476614144') {
           genlog.log(bot, user, {
             message: 'Approved a report',
@@ -636,12 +633,12 @@ commands.registerVote = {
               message: e.message
             }, e)
           })
-          r.db('DFB').table('queue').get(doc.id).delete().run().catch(bugsnag.notify)
+          r.db('DFB').table('queue').get(doc.id).delete().run().catch(logger.raven)
         }
         break
       }
       }
-    }).catch(bugsnag.notify)
+    }).catch(logger.raven)
   }
 }
 
@@ -699,7 +696,7 @@ function switchIDs (og, bot) {
         name: 'thinkBot',
         id: '285445175541497859'
       })
-    }).catch(bugsnag.notify)
+    }).catch(logger.raven)
   })
 }
 
@@ -724,7 +721,7 @@ function wait (bot, msg) {
   let yn = /^y(es)?$|^n(o)?$/i
   return new Promise((resolve, reject) => {
     bot.Dispatcher.on('MESSAGE_CREATE', function doStuff (c) {
-      var time = setTimeout(() => {
+      let time = setTimeout(() => {
         resolve(null)
         bot.Dispatcher.removeListener('MESSAGE_CREATE', doStuff)
       }, config.timeouts.duplicateConfirm) // We won't wait forever for the person to anwser
@@ -744,7 +741,7 @@ function waitID (bot, user, channel) {
   let yn = /^y(es)?$|^n(o)?$/i
   return new Promise((resolve, reject) => {
     bot.Dispatcher.on('MESSAGE_CREATE', function doStuff (c) {
-      var time = setTimeout(() => {
+      let time = setTimeout(() => {
         resolve(null)
         bot.Dispatcher.removeListener('MESSAGE_CREATE', doStuff)
       }, config.timeouts.duplicateConfirm) // We won't wait forever for the person to anwser
