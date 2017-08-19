@@ -308,7 +308,7 @@ commands.info = {
               },
               timestamp: new Date(data.user.created_at)
             })
-          }).catch(() => {}) // Make sentry ignore it, error handling below
+          }).catch(logger.raven)
         }).catch(() => {
           return msg.channel.sendMessage('User could not be found on UserVoice, make sure they have logged into the Feedback site at least once.').then(errMsg => {
             setTimeout(() => bot.Messages.deleteMessages([msg, errMsg]), config.timeouts.errorMessageDelete)

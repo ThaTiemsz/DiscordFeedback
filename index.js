@@ -116,7 +116,8 @@ process.on('uncaughtException', (err) => {
 
 process.on('unhandledRejection', (reason, p) => {
   if (p !== null && reason !== null) {
-    logger.raven(new Error(`Unhandled promise: ${require('util').inspect(p, {depth: 3})}: ${reason}`))
+    if (p instanceof Error) logger.raven(p)
+    else logger.raven(new Error(`Unhandled promise: ${require('util').inspect(p, {depth: 3})}: ${reason}`))
   }
 })
 
