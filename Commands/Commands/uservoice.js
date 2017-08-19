@@ -15,37 +15,39 @@ commands.vote = {
     msg.channel.sendTyping()
     let id = suffix.match(UVRegex)
     getMail(uvClient, msg.author.id)
-    .then(email => uvClient.v1.loginAs(email))
-    .then(user => user.post(`forums/${config.uservoice.forumId}/suggestions/${id}/votes.json`, {to: 1}))
-    .then(() => {
-      msg.reply('vote registered, thanks!')
-      cBack({
-        affected: id
+      .then(email => uvClient.v1.loginAs(email))
+      .then(user => user.post(`forums/${config.uservoice.forumId}/suggestions/${id}/votes.json`, {
+        to: 1
+      }))
+      .then(() => {
+        msg.reply('vote registered, thanks!')
+        cBack({
+          affected: id
+        })
       })
-    })
-    .catch(error => {
-      if (error.statusCode === 404) {
-        msg.reply('Unable to find a suggestion using your query.').then(errmsg => {
-          setTimeout(() => bot.Messages.deleteMessages([msg, errmsg]), config.timeouts.errorMessageDelete)
-        })
-      } else if (error.statusCode === 422) {
-        msg.reply('Voting for this suggestion is no longer open.').then(errmsg => {
-          setTimeout(() => bot.Messages.deleteMessages([msg, errmsg]), config.timeouts.errorMessageDelete)
-        })
-      } else if (error === 'Not Found') {
-        msg.reply(`I was unable to find your details, please make sure you've logged into the website at <https://${config.uservoice.subdomain}.${config.uservoice.domain}> at least once.`).then(errmsg => {
-          setTimeout(() => bot.Messages.deleteMessages([msg, errmsg]), config.timeouts.errorMessageDelete)
-        })
-      } else {
-        logger.log(bot, {
-          cause: 'vote_apply',
-          message: (error.message !== undefined) ? error.message : JSON.stringify(error)
-        }, error)
-        msg.reply('an error occured, please try again later.').then(errmsg => {
-          setTimeout(() => bot.Messages.deleteMessages([msg, errmsg]), config.timeouts.errorMessageDelete)
-        })
-      }
-    })
+      .catch(error => {
+        if (error.statusCode === 404) {
+          msg.reply('Unable to find a suggestion using your query.').then(errmsg => {
+            setTimeout(() => bot.Messages.deleteMessages([msg, errmsg]), config.timeouts.errorMessageDelete)
+          })
+        } else if (error.statusCode === 422) {
+          msg.reply('Voting for this suggestion is no longer open.').then(errmsg => {
+            setTimeout(() => bot.Messages.deleteMessages([msg, errmsg]), config.timeouts.errorMessageDelete)
+          })
+        } else if (error === 'Not Found') {
+          msg.reply(`I was unable to find your details, please make sure you've logged into the website at <https://${config.uservoice.subdomain}.${config.uservoice.domain}> at least once.`).then(errmsg => {
+            setTimeout(() => bot.Messages.deleteMessages([msg, errmsg]), config.timeouts.errorMessageDelete)
+          })
+        } else {
+          logger.log(bot, {
+            cause: 'vote_apply',
+            message: (error.message !== undefined) ? error.message : JSON.stringify(error)
+          }, error)
+          msg.reply('an error occured, please try again later.').then(errmsg => {
+            setTimeout(() => bot.Messages.deleteMessages([msg, errmsg]), config.timeouts.errorMessageDelete)
+          })
+        }
+      })
   }
 }
 
@@ -163,13 +165,11 @@ commands.comment = {
               url: data.comment.suggestion.creator.url,
               icon_url: data.comment.suggestion.creator.avatar_url
             },
-            fields: [
-              {
-                name: `${entities.decode(data.comment.creator.name)} commented on this:`,
-                value: entities.decode(data.comment.text),
-                inline: false
-              }
-            ]
+            fields: [{
+              name: `${entities.decode(data.comment.creator.name)} commented on this:`,
+              value: entities.decode(data.comment.text),
+              inline: false
+            }]
           }).then(successmsg => {
             setTimeout(() => bot.Messages.deleteMessages([msg]), config.timeouts.messageDelete)
           })
@@ -226,8 +226,7 @@ commands.url = {
       let id = suffix.match(/[0-9]{7,}/)[0]
       if (id) msg.reply(`Here's the link: https://${config.uservoice.subdomain}.${config.uservoice.domain}/forums/${config.uservoice.forumId}/suggestions/${suffix}`)
       else msg.reply(`Please enter a Suggestion ID.`)
-    }
-    else msg.reply(`URL for the Feedback page is https://${config.uservoice.subdomain}.${config.uservoice.domain}, though that's probably not what you were looking for. Try entering a Suggestion ID`)
+    } else msg.reply(`URL for the Feedback page is https://${config.uservoice.subdomain}.${config.uservoice.domain}, though that's probably not what you were looking for. Try entering a Suggestion ID`)
   }
 }
 
@@ -235,7 +234,7 @@ commands.info = {
   modOnly: false,
   adminOnly: false,
   fn: function (bot, msg, suffix, uvClient, cBack) {
-    function getInfo (uvid, userid) {
+    function getInfo(uvid, userid) {
       uvClient.v1.loginAsOwner().then(c => {
         c.get(`users/${uvid}.json`).then(data => {
           let dcuser = '*Cannot grab user.*'
@@ -294,7 +293,7 @@ commands.info = {
         })
       })
     }
-    
+
     msg.channel.sendTyping()
     let mentions = msg.mentions
     let userid
@@ -361,7 +360,7 @@ commands.info = {
   }
 }
 
-function getMail (uv, user) {
+function getMail(uv, user) {
   return new Promise(function (resolve, reject) {
     if (config.debug === true) return resolve('hello@dougley.com') // no dox pls
     uv.v1.loginAsOwner().then(i => {
