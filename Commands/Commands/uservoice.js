@@ -13,7 +13,8 @@ commands.vote = {
   modOnly: false,
   fn: function (bot, msg, suffix, uvClient, cBack) {
     msg.channel.sendTyping()
-    let id = suffix.match(UVRegex)
+    let UVmatch = suffix.match(UVRegex)
+    let id = UVmatch ? UVmatch[2] : suffix
     getMail(uvClient, msg.author.id)
       .then(email => uvClient.v1.loginAs(email))
       .then(user => user.post(`forums/${config.uservoice.forumId}/suggestions/${id}/votes.json`, {
