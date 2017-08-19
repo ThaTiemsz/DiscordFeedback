@@ -14,14 +14,12 @@ const bot = new Discordie({
 
 const Raven = require('raven')
 if (Config.debug === true) {
-  let releaseLocation = "development"
-  Raven.config(Config.services.sentry, {
-    environment: releaseLocation
+  Raven.config(Config.discord.sentry, {
+    environment: "development"
   }).install()
 } else {
-  let releaseLocation = "production"
-  Raven.config(Config.services.sentry, {
-    environment: releaseLocation
+  Raven.config(Config.discord.sentry, {
+    environment: "production"
   }).install()
 }
 
