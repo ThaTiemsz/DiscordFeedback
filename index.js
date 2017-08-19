@@ -2,26 +2,15 @@ const Discordie = require('discordie')
 const UserVoice = require('uservoice-nodejs')
 const Events = Discordie.Events
 const Config = require('./config.js')
+const logger = require('./Utils/error_loggers')
 const Commands = require('./Utils/command_engine').Commands
 const AccessChecker = require('./Utils/access_checker')
-const ErrorLog = require('./Utils/error_loggers')
-const GenericLog = require('./Utils/generic_logger')
+const genlog = require('./Utils/generic_logger')
 const woofmeow = require('./Utils/woofmeow')
 const Analytics = require('./Utils/orwell')
 const bot = new Discordie({
   autoReconnect: true
 })
-
-const Raven = require('raven')
-if (Config.debug === true) {
-  Raven.config(Config.services.sentry, {
-    environment: "development"
-  }).install()
-} else {
-  Raven.config(Config.services.sentry, {
-    environment: "production"
-  }).install()
-}
 
 const UVRegex = /https?:\/\/[\w.]+\/forums\/(\d{6,})-[\w-]+\/suggestions\/(\d{7,})(?:-[\w-]*)?/
 
@@ -66,7 +55,7 @@ bot.Dispatcher.on(Events.MESSAGE_CREATE, (c) => {
         } else if (level !== 2 && Commands[cmd].adminOnly === true) return
         try {
           Commands[cmd].fn(bot, msg, suffix, uvClient, (res) => {
-            GenericLog.log(bot, c.message.author, {
+            genlog.log(bot, c.message.author, {
               message: `Ran the command \`${cmd}\``,
               result: res.result,
               affected: res.affected,
@@ -74,7 +63,7 @@ bot.Dispatcher.on(Events.MESSAGE_CREATE, (c) => {
             })
           })
         } catch (e) {
-          ErrorLog.log(bot, {
+          logger.log(bot, {
             cause: cmd,
             message: e.message
           })
@@ -122,12 +111,12 @@ bot.Dispatcher.on(Events.GATEWAY_READY, () => {
 })
 
 process.on('uncaughtException', (err) => {
-  Raven.captureException(err.stack || err)
+  logger.raven(err.stack || err)
 })
 
 process.on('unhandledRejection', (reason, p) => {
   if (p !== null && reason !== null) {
-    Raven.captureException(new Error(`Unhandled promise: ${require('util').inspect(p, {depth: 3})}: ${reason}`))
+    logger.raven(new Error(`Unhandled promise: ${require('util').inspect(p, {depth: 3})}: ${reason}`))
   }
 })
 

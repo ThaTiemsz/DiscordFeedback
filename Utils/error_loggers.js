@@ -1,7 +1,15 @@
 const Config = require('../config.js')
 const Raven = require('raven')
 
-Raven.config(Config.services.sentry).install()
+if (Config.debug === true) {
+  Raven.config(Config.services.sentry, {
+    environment: "development"
+  }).install()
+} else {
+  Raven.config(Config.services.sentry, {
+    environment: "production"
+  }).install()
+}
 
 module.exports = {
   log: (bot, cObj, fullErr) => {
