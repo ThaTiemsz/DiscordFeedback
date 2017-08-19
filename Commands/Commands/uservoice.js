@@ -56,75 +56,60 @@ commands.submit = {
   modOnly: false,
   fn: function (bot, msg, suffix, uvClient, cBack) {
     let channels = require('../../channels')
-    let IDs = Object.getOwnPropertyNames(channels)
-    if (IDs.indexOf(msg.channel.id) === -1) return
     let content = suffix.split(' | ')
+
+    if (Object.getOwnPropertyNames(channels).indexOf(msg.channel.id) === -1) return
     if (content.length !== 2) {
       msg.reply('This command only takes 2 arguments').then(errmsg => {
         setTimeout(() => bot.Messages.deleteMessages([msg, errmsg]), config.timeouts.errorMessageDelete)
       })
     } else {
       msg.channel.sendTyping()
-      getMail(uvClient, msg.author.id).then(email => {
-        uvClient.v1.loginAs(email).then(c => {
-          c.post(`forums/${config.uservoice.forumId}/suggestions.json`, {
-            suggestion: {
-              title: content[0],
-              text: content[1],
-              votes: 1,
-              category_id: channels[msg.channel.id]
-            }
-          }).then(data => {
-            msg.reply('your feedback has been submitted!', false, {
-              color: 0x3498db,
-              author: {
-                name: entities.decode(data.suggestion.creator.name),
-                icon_url: data.suggestion.creator.avatar_url,
-                url: data.suggestion.creator.url
-              },
-              title: entities.decode(data.suggestion.title),
-              description: (data.suggestion.text.length !== 2000) ? entities.decode(data.suggestion.text) : '*Content too long*',
-              url: data.suggestion.url,
-              footer: {
-                text: entities.decode(data.suggestion.category.name)
-              }
-            }).then(successmsg => {
-              setTimeout(() => bot.Messages.deleteMessages([msg]), config.timeouts.messageDelete)
-            })
-            cBack({
-              result: data.suggestion.url
-            })
-          }).catch(e => {
-            logger.log(bot, {
-              cause: 'submit_feedback',
-              message: (e.message !== undefined) ? e.message : JSON.stringify(e)
-            }, e)
-            msg.reply('an error occured, please try again later.').then(errmsg => {
-              setTimeout(() => bot.Messages.deleteMessages([msg, errmsg]), config.timeouts.errorMessageDelete)
-            })
-          })
-        }).catch(e => {
-          logger.log(bot, {
-            cause: 'login_as',
-            message: (e.message !== undefined) ? e.message : JSON.stringify(e)
-          }, e)
-          msg.reply('an error occured, please try again later.').then(errmsg => {
-            setTimeout(() => bot.Messages.deleteMessages([msg, errmsg]), config.timeouts.errorMessageDelete)
-          })
+      getMail(uvClient, msg.author.id).then(email => uvClient.v1.loginAs(email))
+      .then(c => c.post(`forums/${config.uservoice.forumId}/suggestions.json`, {
+        suggestion: {
+          title: content[0],
+          text: content[1],
+          votes: 1,
+          category_id: channels[msg.channel.id]
+        }
+      }))
+      .then(data => {
+        msg.reply('your feedback has been submitted!', false, {
+          color: 0x3498db,
+          author: {
+            name: entities.decode(data.suggestion.creator.name),
+            icon_url: data.suggestion.creator.avatar_url,
+            url: data.suggestion.creator.url
+          },
+          title: entities.decode(data.suggestion.title),
+          description: (data.suggestion.text.length !== 2000) ? entities.decode(data.suggestion.text) : '*Content too long*',
+          url: data.suggestion.url,
+          footer: {
+            text: entities.decode(data.suggestion.category.name)
+          }
+        }).then(successmsg => {
+          setTimeout(() => bot.Messages.deleteMessages([msg]), config.timeouts.messageDelete)
         })
-      }).catch(e => {
+        cBack({
+          result: data.suggestion.url
+        })
+      })
+      .catch(e => {
         if (e === 'Not found') {
-          msg.reply(`I was unable to find your details, make sure you've logged into the website at <https://${config.uservoice.subdomain}.${config.uservoice.domain}> at least once.`).then(errmsg => {
+          msg.reply(`I was unable to find your details, make sure you've logged into the website at <https://${config.uservoice.subdomain}.${config.uservoice.domain}> at least once.`)
+          .then(errmsg => {
             setTimeout(() => bot.Messages.deleteMessages([msg, errmsg]), config.timeouts.errorMessageDelete)
           })
         } else {
           logger.log(bot, {
-            cause: 'email_search',
+            cause: 'submit_feedback',
             message: (e.message !== undefined) ? e.message : JSON.stringify(e)
           }, e)
-          msg.reply('an error occured, please try again later.').then(errmsg => {
-            setTimeout(() => bot.Messages.deleteMessages([msg, errmsg]), config.timeouts.errorMessageDelete)
-          })
+          msg.reply('an error occured, please try again later.')
+            .then(errmsg => {
+              setTimeout(() => bot.Messages.deleteMessages([msg, errmsg]), config.timeouts.errorMessageDelete)
+            })
         }
       })
     }
