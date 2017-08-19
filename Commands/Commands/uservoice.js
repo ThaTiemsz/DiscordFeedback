@@ -13,56 +13,34 @@ commands.vote = {
   modOnly: false,
   fn: function (bot, msg, suffix, uvClient, cBack) {
     msg.channel.sendTyping()
-    getMail(uvClient, msg.author.id).then(email => {
-      uvClient.v1.loginAs(email).then(c => {
-        let parts = suffix.match(UVRegex)
-        let id
-        if (parts === null) {
-          id = suffix
-        } else {
-          id = parts[2]
-        }
-        c.post(`forums/${config.uservoice.forumId}/suggestions/${id}/votes.json`, {
-          to: 1
-        }).then((s) => {
-          msg.reply('vote registered, thanks!')
-          cBack({
-            affected: id
-          })
-        }).catch(e => {
-          if (e.statusCode === 404) {
-            msg.reply('unable to find a suggestion using your query.').then(errmsg => {
-              setTimeout(() => bot.Messages.deleteMessages([msg, errmsg]), config.timeouts.errorMessageDelete)
-            })
-          } else {
-            logger.log(bot, {
-              cause: 'vote_apply',
-              message: (e.message !== undefined) ? e.message : JSON.stringify(e)
-            }, e)
-            msg.reply('an error occured, please try again later.').then(errmsg => {
-              setTimeout(() => bot.Messages.deleteMessages([msg, errmsg]), config.timeouts.errorMessageDelete)
-            })
-          }
-        })
-      }).catch(e => {
-        logger.log(bot, {
-          cause: 'login_as',
-          message: (e.message !== undefined) ? e.message : JSON.stringify(e)
-        }, e)
-        msg.reply('an error occured, please try again later.').then(errmsg => {
+    let id = suffix.match(UVRegex)
+    getMail(uvClient, msg.author.id)
+    .then(email => uvClient.v1.loginAs(email))
+    .then(user => user.post(`forums/${config.uservoice.forumId}/suggestions/${id}/votes.json`, {to: 1}))
+    .then(() => {
+      msg.reply('vote registered, thanks!')
+      cBack({
+        affected: id
+      })
+    })
+    .catch(error => {
+      if (error.statusCode === 404) {
+        msg.reply('Unable to find a suggestion using your query.').then(errmsg => {
           setTimeout(() => bot.Messages.deleteMessages([msg, errmsg]), config.timeouts.errorMessageDelete)
         })
-      })
-    }).catch(e => {
-      if (e === 'Not found') {
-        msg.reply(`I was unable to find your details, make sure you've logged into the website at <https://${config.uservoice.subdomain}.${config.uservoice.domain}> at least once.`).then(errmsg => {
+      } else if (error.statusCode === 422) {
+        msg.reply('Voting for this suggestion is no longer open.').then(errmsg => {
+          setTimeout(() => bot.Messages.deleteMessages([msg, errmsg]), config.timeouts.errorMessageDelete)
+        })
+      } else if (error === 'Not Found') {
+        msg.reply(`I was unable to find your details, please make sure you've logged into the website at <https://${config.uservoice.subdomain}.${config.uservoice.domain}> at least once.`).then(errmsg => {
           setTimeout(() => bot.Messages.deleteMessages([msg, errmsg]), config.timeouts.errorMessageDelete)
         })
       } else {
         logger.log(bot, {
-          cause: 'email_search',
-          message: (e.message !== undefined) ? e.message : JSON.stringify(e)
-        }, e)
+          cause: 'vote_apply',
+          message: (error.message !== undefined) ? error.message : JSON.stringify(error)
+        }, error)
         msg.reply('an error occured, please try again later.').then(errmsg => {
           setTimeout(() => bot.Messages.deleteMessages([msg, errmsg]), config.timeouts.errorMessageDelete)
         })
