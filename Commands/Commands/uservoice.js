@@ -67,52 +67,52 @@ commands.submit = {
     } else {
       msg.channel.sendTyping()
       getMail(uvClient, msg.author.id).then(email => uvClient.v1.loginAs(email))
-      .then(c => c.post(`forums/${config.uservoice.forumId}/suggestions.json`, {
-        suggestion: {
-          title: content[0],
-          text: content[1],
-          votes: 1,
-          category_id: channels[msg.channel.id]
-        }
-      }))
-      .then(data => {
-        msg.reply('your feedback has been submitted!', false, {
-          color: 0x3498db,
-          author: {
-            name: entities.decode(data.suggestion.creator.name),
-            icon_url: data.suggestion.creator.avatar_url,
-            url: data.suggestion.creator.url
-          },
-          title: entities.decode(data.suggestion.title),
-          description: (data.suggestion.text.length !== 2000) ? entities.decode(data.suggestion.text) : '*Content too long*',
-          url: data.suggestion.url,
-          footer: {
-            text: entities.decode(data.suggestion.category.name)
+        .then(c => c.post(`forums/${config.uservoice.forumId}/suggestions.json`, {
+          suggestion: {
+            title: content[0],
+            text: content[1],
+            votes: 1,
+            category_id: channels[msg.channel.id]
           }
-        }).then(successmsg => {
-          setTimeout(() => bot.Messages.deleteMessages([msg]), config.timeouts.messageDelete)
-        })
-        cBack({
-          result: data.suggestion.url
-        })
-      })
-      .catch(e => {
-        if (e === 'Not found') {
-          msg.reply(`I was unable to find your details, make sure you've logged into the website at <https://${config.uservoice.subdomain}.${config.uservoice.domain}> at least once.`)
-          .then(errmsg => {
-            setTimeout(() => bot.Messages.deleteMessages([msg, errmsg]), config.timeouts.errorMessageDelete)
+        }))
+        .then(data => {
+          msg.reply('your feedback has been submitted!', false, {
+            color: 0x3498db,
+            author: {
+              name: entities.decode(data.suggestion.creator.name),
+              icon_url: data.suggestion.creator.avatar_url,
+              url: data.suggestion.creator.url
+            },
+            title: entities.decode(data.suggestion.title),
+            description: (data.suggestion.text.length !== 2000) ? entities.decode(data.suggestion.text) : '*Content too long*',
+            url: data.suggestion.url,
+            footer: {
+              text: entities.decode(data.suggestion.category.name)
+            }
+          }).then(successmsg => {
+            setTimeout(() => bot.Messages.deleteMessages([msg]), config.timeouts.messageDelete)
           })
-        } else {
-          logger.log(bot, {
-            cause: 'submit_feedback',
-            message: (e.message !== undefined) ? e.message : JSON.stringify(e)
-          }, e)
-          msg.reply('an error occured, please try again later.')
-            .then(errmsg => {
-              setTimeout(() => bot.Messages.deleteMessages([msg, errmsg]), config.timeouts.errorMessageDelete)
-            })
-        }
-      })
+          cBack({
+            result: data.suggestion.url
+          })
+        })
+        .catch(e => {
+          if (e === 'Not found') {
+            msg.reply(`I was unable to find your details, make sure you've logged into the website at <https://${config.uservoice.subdomain}.${config.uservoice.domain}> at least once.`)
+              .then(errmsg => {
+                setTimeout(() => bot.Messages.deleteMessages([msg, errmsg]), config.timeouts.errorMessageDelete)
+              })
+          } else {
+            logger.log(bot, {
+              cause: 'submit_feedback',
+              message: (e.message !== undefined) ? e.message : JSON.stringify(e)
+            }, e)
+            msg.reply('an error occured, please try again later.')
+              .then(errmsg => {
+                setTimeout(() => bot.Messages.deleteMessages([msg, errmsg]), config.timeouts.errorMessageDelete)
+              })
+          }
+        })
     }
   }
 }
@@ -122,8 +122,9 @@ commands.comment = {
   modOnly: false,
   fn: function (bot, msg, suffix, uvClient, cBack) {
     msg.channel.sendTyping()
-    getMail(uvClient, msg.author.id).then(email => {
-      uvClient.v1.loginAs(email).then(c => {
+    getMail(uvClient, msg.author.id)
+      .then(email => uvClient.v1.loginAs(email))
+      .then(c => {
         let s = suffix.split(' ')
         let idt = s[0]
         s.shift()
@@ -140,70 +141,56 @@ commands.comment = {
           comment: {
             text: content
           }
-        }).then(data => {
-          msg.reply('your comment was added.', false, {
-            title: entities.decode(data.comment.suggestion.title),
-            url: data.comment.suggestion.url,
-            description: (data.comment.suggestion.text !== null) ? ((data.comment.suggestion.text.length < 1900) ? entities.decode(data.comment.suggestion.text) : '*Content too long*') : '*No content*',
-            color: 0x3498db,
-            author: {
-              name: entities.decode(data.comment.suggestion.creator.name),
-              url: data.comment.suggestion.creator.url,
-              icon_url: data.comment.suggestion.creator.avatar_url
-            },
-            fields: [{
-              name: `${entities.decode(data.comment.creator.name)} commented on this:`,
-              value: entities.decode(data.comment.text),
-              inline: false
-            }]
-          }).then(successmsg => {
-            setTimeout(() => bot.Messages.deleteMessages([msg]), config.timeouts.messageDelete)
-          })
-          cBack({
-            affected: id,
-            result: 'A new comment was created'
-          })
-        }).catch(e => {
-          if (e.statusCode === 404) {
-            msg.reply('unable to find a suggestion using your query.').then(errmsg => {
-              setTimeout(() => bot.Messages.deleteMessages([msg, errmsg]), config.timeouts.errorMessageDelete)
-            })
-          } else {
-            logger.log(bot, {
-              cause: 'comment_add',
-              message: (e.message !== undefined) ? e.message : JSON.stringify(e)
-            }, e)
-            msg.reply('an error occured, please try again later.').then(errmsg => {
-              setTimeout(() => bot.Messages.deleteMessages([msg, errmsg]), config.timeouts.errorMessageDelete)
-            })
-          }
         })
-      }).catch(e => {
-        logger.log(bot, {
-          cause: 'login_as',
-          message: (e.message !== undefined) ? e.message : JSON.stringify(e)
-        }, e)
-        msg.reply('an error occured, please try again later.').then(errmsg => {
-          setTimeout(() => bot.Messages.deleteMessages([msg, errmsg]), config.timeouts.errorMessageDelete)
-        })
+          .then(data => {
+            msg.reply('your comment was added.', false, {
+              title: entities.decode(data.comment.suggestion.title),
+              url: data.comment.suggestion.url,
+              description: (data.comment.suggestion.text !== null) ? ((data.comment.suggestion.text.length < 1900) ? entities.decode(data.comment.suggestion.text) : '*Content too long*') : '*No content*',
+              color: 0x3498db,
+              author: {
+                name: entities.decode(data.comment.suggestion.creator.name),
+                url: data.comment.suggestion.creator.url,
+                icon_url: data.comment.suggestion.creator.avatar_url
+              },
+              fields: [{
+                name: `${entities.decode(data.comment.creator.name)} commented on this:`,
+                value: entities.decode(data.comment.text),
+                inline: false
+              }]
+            }).then(successmsg => {
+              setTimeout(() => bot.Messages.deleteMessages([msg]), config.timeouts.messageDelete)
+            })
+            cBack({
+              affected: id,
+              result: 'A new comment was created'
+            })
+          })
+          .catch(e => {
+            if (e.statusCode === 404) {
+              msg.reply('unable to find a suggestion using your query.').then(errmsg => {
+                setTimeout(() => bot.Messages.deleteMessages([msg, errmsg]), config.timeouts.errorMessageDelete)
+              })
+            } else if (e === 'Not found') {
+              msg.reply(`I was unable to find your details, make sure you've logged into the website at <https://${config.uservoice.subdomain}.${config.uservoice.domain}> at least once.`)
+                .then(errmsg => {
+                  setTimeout(() => bot.Messages.deleteMessages([msg, errmsg]), config.timeouts.errorMessageDelete)
+                })
+            } else {
+              logger.log(bot, {
+                cause: 'comment_add',
+                message: (e.message !== undefined) ? e.message : JSON.stringify(e)
+              }, e)
+              msg.reply('an error occured, please try again later.')
+                .then(errmsg => {
+                  setTimeout(() => bot.Messages.deleteMessages([msg, errmsg]), config.timeouts.errorMessageDelete)
+                })
+            }
+          })
       })
-    }).catch(e => {
-      if (e === 'Not found') {
-        msg.reply(`I was unable to find your details, make sure you've logged into the website at <https://${config.uservoice.subdomain}.${config.uservoice.domain}> at least once.`).then(errmsg => {
-          setTimeout(() => bot.Messages.deleteMessages([msg, errmsg]), config.timeouts.errorMessageDelete)
-        })
-      } else {
-        logger.log(bot, {
-          cause: 'email_search',
-          message: (e.message !== undefined) ? e.message : JSON.stringify(e)
-        }, e)
-        msg.reply('an error occured, please try again later.').then(errmsg => {
-          setTimeout(() => bot.Messages.deleteMessages([msg, errmsg]), config.timeouts.errorMessageDelete)
-        })
-      }
-    })
   }
 }
+
 commands.url = {
   adminOnly: false,
   modOnly: false,
