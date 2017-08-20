@@ -32,27 +32,33 @@ function generateTop (bot, uv) {
     let messages
     let counter = 0
     let fetched = false
-    channel.fetchMessages().then(msgs => {
+    channel.fetchMessages()
+    .then(msgs => {
       messages = msgs.messages.filter(y => y.author.id === bot.User.id)
       fetched = messages.length > 0
     })
-    uv.v1.loginAsOwner().then(f => {
+    uv.v1.loginAsOwner()
+    .then(f => {
       f.get(`forums/${config.uservoice.forumId}/suggestions.json`, {
         per_page: 25
-      }).then(data => {
+      })
+      .then(data => {
         for (let suggestion of data.suggestions) {
           if (counter === 10) break
           if (!suggestion.status || suggestion.status && suggestion.status.name !== 'completed') {
             counter++
-            generateEmbed(suggestion).then(embed => {
+            generateEmbed(suggestion)
+            .then(embed => {
               let message = messages.pop()
               if (!message && fetched === false) {
-                channel.sendMessage('', false, embed).then(msg => {
+                channel.sendMessage('', false, embed)
+                .then(msg => {
                   r.db('DFB').table('queue').insert({
                     id: msg.id,
                     type: 'upvoteOnly',
                     UvId: suggestion.id
-                  }).then(() => {
+                  })
+                  .then(() => {
                     msg.addReaction({
                       id: '302138464986595339',
                       name: 'upvote'
@@ -61,16 +67,25 @@ function generateTop (bot, uv) {
                 })
               } else {
                 message.edit('', embed).then(msg => {
-                  r.db('DFB').table('queue').get(msg.id).then(doc => {
+                  r.db('DFB').table('queue').get(msg.id)
+                  .then(doc => {
                     if (doc.UvId !== suggestion.id) msg.clearReactions()
                     r.db('DFB').table('queue').get(msg.id).update({
                       type: 'upvoteOnly',
                       UvId: suggestion.id
-                    }).then(() => {
+                    })
+                    .then(() => {
                       msg.addReaction({
                         id: '302138464986595339',
                         name: 'upvote'
-                      })
+                      }).catch(e => {
+                        if (e.code !== 10014) {
+                          require('../../Utils/error_loggers').log(bot, {
+                            cause: 'add_top10_reaction',
+                            message: (e.message !== undefined) ? e.message : JSON.stringify(e)
+                          }, e)
+                        }
+                      }) 
                     })
                   })
                 })
