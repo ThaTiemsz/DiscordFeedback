@@ -12,9 +12,9 @@ commands.ping = {
   phantom: true,
   adminOnly: true,
   modOnly: false,
-  fn: function (bot, msg) {
-    msg.channel.sendMessage('Pong!').then(successmsg => {
-      setTimeout(() => bot.Messages.deleteMessages([msg, successmsg]), config.timeouts.messageDelete)
+  fn: (bot, msg) => {
+    msg.channel.send('Pong!').then(successmsg => {
+      setTimeout(() => msg.channel.bulkDelete([msg, successmsg]), config.timeouts.messageDelete)
     })
   }
 }
@@ -22,9 +22,9 @@ commands.ping = {
 commands.help = {
   adminOnly: false,
   modOnly: false,
-  fn: function (bot, msg) {
-    msg.channel.sendMessage(`Hey ${msg.author.mention}! You can find all the info you need about the bot over at <#268812893087203338>!`).then(successmsg => {
-      setTimeout(() => bot.Messages.deleteMessages([msg, successmsg]), config.timeouts.errorMessageDelete)
+  fn: (bot, msg) => {
+    msg.channel.send(`Hey ${msg.author}! You can find all the info you need about the bot over at <#268812893087203338>!`).then(successmsg => {
+      setTimeout(() => msg.channel.bulkDelete([msg, successmsg]), config.timeouts.errorMessageDelete)
     })
   }
 }
@@ -32,7 +32,7 @@ commands.help = {
 commands['autorole-rerun'] = {
   adminOnly: true,
   modOnly: false, 
-  fn: function (bot, msg) {
+  fn: (bot, msg) => {
     msg.reply('rerunning autorole...').then(() => {
       analytics.roleUsers(msg.guild, bot)
     })
@@ -42,7 +42,7 @@ commands['autorole-rerun'] = {
 commands.stats = {
   adminOnly: false,
   modOnly: false,
-  fn: function (bot, msg) {
+  fn: (bot, msg) => {
     let moment = require('moment') // forgive me father for i have sinned
     analytics.getPoints(msg.member.id).then(data => {
       if (data === null) return msg.reply("you don't have any stats registered right now.")
@@ -91,15 +91,15 @@ commands.stats = {
           inline: true
         }
       )
-      msg.author.openDM().then((e) => {
-        e.sendMessage('', false, {
+      msg.author.createDM().then((e) => {
+        e.send('', { embed: {
           color: 0x59f442,
           title: `${msg.author.username} - Statistics`,
           thumbnail: {
-            url: msg.author.staticAvatarURL
+            url: msg.author.defaultAvatarURL
           },
           fields: field
-        }).catch(logger.raven) // Send Message to DM error
+        }}).catch(logger.raven) // Send Message to DM error
       }).then(msg.delete()).catch(logger.raven) // Error opening DM channel
     }).catch(e => {
       msg.reply('an unexpected error occured while getting your stats, try again later.')
@@ -111,32 +111,32 @@ commands.stats = {
 commands['stats-reset'] = {
   adminOnly: true,
   modOnly: false,
-  fn: function (bot, msg, suffix) {
+  fn: (bot, msg, suffix) => {
     r.db('DFB').table('analytics').get(suffix).then(data => {
       if (data !== null) {
         msg.reply(`you're about to reset the stats for ${suffix}, are you sure?`).then(() => {
           wait(bot, msg).then(resp => {
             if (resp === null) {
-              msg.channel.sendMessage('No answer given in time, operation aborted.')
+              msg.channel.send('No answer given in time, operation aborted.')
             }
             if (resp === false) {
-              msg.channel.sendMessage('Operation aborted.')
+              msg.channel.send('Operation aborted.')
             }
             if (resp === true) {
-              msg.channel.sendMessage(`Are you **ABSOLUTELY** sure? This can not be undone!`).then(() => {
+              msg.channel.send(`Are you **ABSOLUTELY** sure? This can not be undone!`).then(() => {
                 wait(bot, msg).then(resp2 => {
                   if (resp2 === null) {
-                    msg.channel.sendMessage('No answer given in time, operation aborted.')
+                    msg.channel.send('No answer given in time, operation aborted.')
                   }
                   if (resp2 === false) {
-                    msg.channel.sendMessage('Operation aborted.')
+                    msg.channel.send('Operation aborted.')
                   }
                   if (resp2 === true) {
                     r.db('DFB').table('analytics').get(suffix).delete().run().then(() => {
-                      msg.channel.sendMessage(`Stats for ${suffix} are deleted.`)
+                      msg.channel.send(`Stats for ${suffix} are deleted.`)
                     }).catch(e => {
                       logger.raven(e)
-                      msg.channel.sendMessage(`Failed to delete stats for ${suffix}`)
+                      msg.channel.send(`Failed to delete stats for ${suffix}`)
                     })
                   }
                 })
@@ -154,11 +154,11 @@ commands['stats-reset'] = {
 commands.lookup = {
   adminOnly: true,
   modOnly: false,
-  fn: function (bot, msg, suffix) {
+  fn: (bot, msg, suffix) => {
     let moment = require('moment') // forgive me father for i have sinned
     analytics.getPoints((msg.mentions.length !== 0) ? msg.mentions[0].id : suffix).then(data => {
       if (data === null) return msg.reply("couldn't find data on this user.")
-      let member = msg.guild.members.find(member => member.id === data.id)
+      let member = msg.guild.members.get(data.id)
       let now = new Date()
       let today = new Date(now.getFullYear(), now.getUTCMonth(), now.getUTCDate()).getTime()
       let dataObj = {}
@@ -204,14 +204,14 @@ commands.lookup = {
           inline: true
         }
       )
-      msg.channel.sendMessage('', false, {
+      msg.channel.send('', false, { embed: {
         color: 0x59f442,
-        title: `Statistics for ${member.username}#${member.discriminator}`,
+        title: `Statistics for ${member.user.tag}`,
         thumbnail: {
-          url: member.staticAvatarURL
+          url: member.defaultAvatarURL
         },
         fields: field
-      })
+      }})
     }).catch(e => {
       msg.reply('an unexpected error occured while getting your stats, try again later.')
       logger.raven(e)
@@ -223,10 +223,10 @@ commands.fetch = {
   phantom: true,
   adminOnly: true,
   modOnly: false,
-  fn: function (bot, msg) {
+  fn: (bot, msg) => {
     msg.channel.fetchMessages().then(g => {
       msg.reply(`fetched ${g.messages.length} messages in this channel.`).then(f => {
-        setTimeout(() => bot.Messages.deleteMessages([msg, f]), config.timeouts.messageDelete)
+        setTimeout(() => msg.channel.bulkDelete([msg, f]), config.timeouts.messageDelete)
       })
     })
   }
@@ -236,13 +236,14 @@ commands.shutdown = {
   phantom: true,
   adminOnly: true,
   modOnly: false,
-  fn: function (bot, msg) {
+  fn: (bot, msg) => {
     msg.reply('shutting down...').then(() => {
       process.exit(0)
     })
   }
 }
 
+// TO-DO: MessageCollector
 function wait (bot, msg) {
   let yn = /^y(es)?$|^n(o)?$/i
   return new Promise((resolve, reject) => {

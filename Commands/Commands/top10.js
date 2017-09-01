@@ -8,7 +8,7 @@ let commands = []
 
 commands.initializeTop = {
   internal: true,
-  fn: function (bot, uv) {
+  fn: (bot, uv) => {
     generateTop(bot, uv)
     setInterval(() => generateTop(bot, uv), 3600000) // update the top 10 hourly
   }
@@ -17,7 +17,7 @@ commands.initializeTop = {
 commands.regenerate = {
   adminOnly: true,
   modOnly: false,
-  fn: function (bot, msg, suffix, uv) {
+  fn: (bot, msg, suffix, uv) => {
     msg.reply('regenerating the top 10, this could take a while...').then((msg) => {
       generateTop(bot, uv).then(() => {
         msg.edit('Done! You can check the results at <#268812972401360906>')
@@ -27,14 +27,14 @@ commands.regenerate = {
 }
 
 function generateTop (bot, uv) {
-  return new Promise(function(resolve, reject) {
-    let channel = bot.Channels.find(c => c.name === 'top-10-suggestions')
+  return new Promise((resolve, reject) => {
+    let channel = bot.channels.find('name', 'top-10-suggestions')
     let messages
     let counter = 0
     let fetched = false
     channel.fetchMessages().then(msgs => {
-      messages = msgs.messages.filter(y => y.author.id === bot.User.id)
-      fetched = messages.length > 0
+      messages = msgs.filter(y => y.author.id === bot.user.id)
+      fetched = messages.size > 0
     })
     uv.v1.loginAsOwner().then(f => {
       f.get(`forums/${config.uservoice.forumId}/suggestions.json`, {
@@ -47,16 +47,13 @@ function generateTop (bot, uv) {
             generateEmbed(suggestion).then(embed => {
               let message = messages.pop()
               if (!message && fetched === false) {
-                channel.sendMessage('', false, embed).then(msg => {
+                channel.send('', embed).then(msg => {
                   r.db('DFB').table('queue').insert({
                     id: msg.id,
                     type: 'upvoteOnly',
                     UvId: suggestion.id
                   }).then(() => {
-                    msg.addReaction({
-                      id: '302138464986595339',
-                      name: 'upvote'
-                    })
+                    msg.react('upvote:302138464986595339')
                   })
                 })
               } else {
@@ -67,10 +64,7 @@ function generateTop (bot, uv) {
                       type: 'upvoteOnly',
                       UvId: suggestion.id
                     }).then(() => {
-                      msg.addReaction({
-                        id: '302138464986595339',
-                        name: 'upvote'
-                      })
+                      msg.react('302138464986595339:upvote')
                     })
                   })
                 })
@@ -85,7 +79,7 @@ function generateTop (bot, uv) {
 }
 
 function generateEmbed (data) {
-  return new Promise(function(resolve, reject) {
+  return new Promise((resolve, reject) => {
     try {
       let embedFields = (data.response) ? [{
         name: "Votes",
@@ -112,7 +106,7 @@ function generateEmbed (data) {
         author: {
           name: (data.creator) ? entities.decode(data.creator.name) : 'Anonymous',
           url: (data.creator) ? data.creator.url : undefined,
-          icon_url: (data.creator) ? data.creator.avatar_url : 'https://assets1.uvcdn.com/pkg/admin/icons/user_70-62136f6de7efc58cc79dabcfed799c01.png' // This is the default UV avatar
+          iconURL: (data.creator) ? data.creator.avatar_url : 'https://assets1.uvcdn.com/pkg/admin/icons/user_70-62136f6de7efc58cc79dabcfed799c01.png' // This is the default UV avatar
         },
         fields: embedFields
       })

@@ -1,6 +1,5 @@
-const Discordie = require('discordie')
+const Discord = require('discord.js')
 const UserVoice = require('uservoice-nodejs')
-const Events = Discordie.Events
 const Config = require('./config.js')
 const logger = require('./Utils/error_loggers')
 const Commands = require('./Utils/command_engine').Commands
@@ -8,9 +7,7 @@ const AccessChecker = require('./Utils/access_checker')
 const genlog = require('./Utils/generic_logger')
 const woofmeow = require('./Utils/woofmeow')
 const Analytics = require('./Utils/orwell')
-const bot = new Discordie({
-  autoReconnect: true
-})
+const bot = new Discord.Client()
 
 const UVRegex = /https?:\/\/[\w.]+\/forums\/(\d{6,})-[\w-]+\/suggestions\/(\d{7,})(?:-[\w-]*)?/
 
@@ -27,84 +24,79 @@ const uvClient = {
   })
 }
 
-bot.Dispatcher.on(Events.MESSAGE_CREATE, (c) => {
-  if (c.message.isPrivate === true) return
-  if (c.message.channel.id !== Config.discord.feedChannel && c.message.content.match(UVRegex) !== null && c.message.content.indexOf(Config.discord.prefix) !== 0) {
-    let parts = c.message.content.match(UVRegex)
-    Commands['chatVoteInit'].fn(c.message, parts[2], uvClient)
+bot.on('message', (message) => {
+  if (message.channel.type === 'dm') return
+  if (message.channel.id !== Config.discord.feedChannel && message.content.match(UVRegex) !== null && message.content.indexOf(Config.discord.prefix) !== 0) {
+    let parts = message.content.match(UVRegex)
+    Commands['chatVoteInit'].fn(message, parts[2], uvClient)
   }
-  if (c.message.channel.id === Config.discord.feedChannel && c.message.author.id !== bot.User.id && c.message.author.bot) {
-    Commands['newCardInit'].fn(c.message)
+  if (message.channel.id === Config.discord.feedChannel && message.author.id !== bot.user.id && message.author.bot) {
+    Commands['newCardInit'].fn(message)
     return
   }
-  if (!c.message.author.bot) {
-    Analytics.awardPoints(c.message.author.id, 'messages')
+  if (!message.author.bot) {
+    Analytics.awardPoints(message.author.id, 'messages')
   }
-  if (c.message.content.indexOf(Config.discord.prefix) === 0) {
-    let cmd = c.message.content.substr(Config.discord.prefix.length).split(' ')[0].toLowerCase()
-    let suffix
-    suffix = c.message.content.substr(Config.discord.prefix.length).split(' ')
-    suffix = suffix.slice(1, suffix.length).join(' ')
-    let msg = c.message
-    if (Commands[cmd]) {
-      if (Commands[cmd].internal === true) return
-      AccessChecker.getLevel(msg.member, (level) => {
-        if (level === 0 && Commands[cmd].modOnly === true) {
-          if (Commands[cmd].phantom !== undefined) msg.reply('this command is restricted, and not available to you.')
-          return
-        } else if (level !== 2 && Commands[cmd].adminOnly === true) return
-        try {
-          Commands[cmd].fn(bot, msg, suffix, uvClient, (res) => {
-            genlog.log(bot, c.message.author, {
-              message: `Ran the command \`${cmd}\``,
-              result: res.result,
-              affected: res.affected,
-              awardPoints: true
-            })
-          })
-        } catch (e) {
-          logger.log(bot, {
-            cause: cmd,
-            message: e.message
-          })
-          woofmeow.woofmeow().then((c) => {
-            msg.reply(`an error occurred while processing this command, the admins have been alerted, please try again later.\nHere's your consolation animal image: ${c}`)
-          })
-        }
+  if (message.content.indexOf(Config.discord.prefix) !== 0) return
+  let cmd = message.content.substr(Config.discord.prefix.length).split(' ')[0].toLowerCase()
+  let suffix
+  suffix = message.content.substr(Config.discord.prefix.length).split(' ')
+  suffix = suffix.slice(1, suffix.length).join(' ')
+  let msg = message
+  if (!Commands[cmd]) return
+  if (Commands[cmd].internal === true) return
+  AccessChecker.getLevel(msg.member, (level) => {
+    if (level === 0 && Commands[cmd].modOnly === true) {
+      if (Commands[cmd].phantom !== undefined) msg.reply('this command is restricted, and not available to you.')
+      return
+    } else if (level !== 2 && Commands[cmd].adminOnly === true) return
+    try {
+      Commands[cmd].fn(bot, msg, suffix, uvClient, (res) => {
+        genlog.log(bot, message.author, {
+          message: `Ran the command \`${cmd}\``,
+          result: res.result,
+          affected: res.affected,
+          awardPoints: true
+        })
+      })
+    } catch (e) {
+      logger.log(bot, {
+        cause: cmd,
+        message: e.message
+      })
+      woofmeow.woofmeow().then(c => {
+        msg.reply(`an error occurred while processing this command, the admins have been alerted, please try again later.\nHere's your consolation animal image: ${c}`)
       })
     }
-  }
+  })
 })
 
-bot.Dispatcher.on(Events.MESSAGE_REACTION_ADD, (m) => {
-  if (m.user.id !== bot.User.id) {
-    if (m.message === null) {
-      bot.Channels.get(m.data.channel_id).fetchMessages().then(() => {
-        m.message = bot.Messages.get(m.data.message_id)
+bot.on('messageReactionAdd', (r, user) => {
+  if (user.id !== bot.user.id) {
+    if (r.message === null) {
+      bot.channels.get(r.message.channel.id).fetchMessage(r.message.id).then((msg) => {
+        r.message = msg
       })
     }
-    Commands['registerVote'].fn(m.message, m.emoji, bot, uvClient, m.user)
+    Commands['registerVote'].fn(r.message, r.emoji, bot, uvClient, user)
   }
 })
 
-bot.Dispatcher.on(Events.GUILD_MEMBER_UPDATE, (c) => {
-  for (let role of c.rolesAdded) {
-    if (role.id === '268815388882632704') {
-      bot.Channels.get('284796966641205249').sendMessage(`Welcome ${c.member.mention} to the custodians!`)
-    }
-  }
+bot.on('guildMemberUpdate', (o, n) => {
+  const custodianRole = '268815388882632704'
+  if (o.roles.has(custodianRole) === false && n.roles.has(custodianRole) === true) bot.channels.get('284796966641205249').send(`Welcome ${c.member} to the custodians!`)
 })
 
-bot.Dispatcher.on(Events.GATEWAY_READY, () => {
+bot.on('ready', () => {
   setInterval(() => {
-    bot.Users.fetchMembers() // Hacky way to cache offline users, #blamelazyloading
+    bot.guilds.get(Config.discord.guild).fetchMembers() // Hacky way to cache offline users, #blamelazyloading
   }, 600000)
   console.log('Feedback bot is ready!')
   
   // Autorole!
-  Analytics.roleUsers(bot.Guilds.get(Config.discord.guild), bot)
+  Analytics.roleUsers(bot.guilds.get(Config.discord.guild), bot)
   setInterval(() => {
-    Analytics.roleUsers(bot.Guilds.get(Config.discord.guild), bot)
+    Analytics.roleUsers(bot.guilds.get(Config.discord.guild), bot)
   }, 3600000) // once an hour
 
   Commands['initializeTop'].fn(bot, uvClient)
@@ -121,14 +113,12 @@ process.on('unhandledRejection', (reason, p) => {
   }
 })
 
-bot.Dispatcher.on(Events.DISCONNECTED, (e) => {
-  console.error('Connection to Discord has been lost... Delay till reconnect:', e.delay)
+bot.on('disconnect', () => {
+  console.error('Connection to Discord has been lost...')
 })
 
-bot.Dispatcher.on(Events.GATEWAY_RESUMED, () => {
+bot.on('resume', () => {
   console.log('Reconnected.')
 })
 
-bot.connect({
-  token: Config.discord.token
-})
+bot.login(Config.discord.token)

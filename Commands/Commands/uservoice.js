@@ -11,8 +11,8 @@ const entities = new Entities()
 commands.vote = {
   adminOnly: false,
   modOnly: false,
-  fn: function (bot, msg, suffix, uvClient, cBack) {
-    msg.channel.sendTyping()
+  fn: (bot, msg, suffix, uvClient, cBack) => {
+    msg.channel.startTyping()
     getMail(uvClient, msg.author.id).then(email => {
       uvClient.v1.loginAs(email).then(c => {
         let parts = suffix.match(UVRegex)
@@ -32,7 +32,7 @@ commands.vote = {
         }).catch(e => {
           if (e.statusCode === 404) {
             msg.reply('unable to find a suggestion using your query.').then(errmsg => {
-              setTimeout(() => bot.Messages.deleteMessages([msg, errmsg]), config.timeouts.errorMessageDelete)
+              setTimeout(() => msg.channel.bulkDelete([msg, errmsg]), config.timeouts.errorMessageDelete)
             })
           } else {
             logger.log(bot, {
@@ -40,7 +40,7 @@ commands.vote = {
               message: (e.message !== undefined) ? e.message : JSON.stringify(e)
             }, e)
             msg.reply('an error occured, please try again later.').then(errmsg => {
-              setTimeout(() => bot.Messages.deleteMessages([msg, errmsg]), config.timeouts.errorMessageDelete)
+              setTimeout(() => msg.channel.bulkDelete([msg, errmsg]), config.timeouts.errorMessageDelete)
             })
           }
         })
@@ -50,13 +50,13 @@ commands.vote = {
           message: (e.message !== undefined) ? e.message : JSON.stringify(e)
         }, e)
         msg.reply('an error occured, please try again later.').then(errmsg => {
-          setTimeout(() => bot.Messages.deleteMessages([msg, errmsg]), config.timeouts.errorMessageDelete)
+          setTimeout(() => msg.channel.bulkDelete([msg, errmsg]), config.timeouts.errorMessageDelete)
         })
       })
     }).catch(e => {
       if (e === 'Not found') {
         msg.reply(`I was unable to find your details, make sure you've logged into the website at <https://${config.uservoice.subdomain}.${config.uservoice.domain}> at least once.`).then(errmsg => {
-          setTimeout(() => bot.Messages.deleteMessages([msg, errmsg]), config.timeouts.errorMessageDelete)
+          setTimeout(() => msg.channel.bulkDelete([msg, errmsg]), config.timeouts.errorMessageDelete)
         })
       } else {
         logger.log(bot, {
@@ -64,7 +64,7 @@ commands.vote = {
           message: (e.message !== undefined) ? e.message : JSON.stringify(e)
         }, e)
         msg.reply('an error occured, please try again later.').then(errmsg => {
-          setTimeout(() => bot.Messages.deleteMessages([msg, errmsg]), config.timeouts.errorMessageDelete)
+          setTimeout(() => msg.channel.bulkDelete([msg, errmsg]), config.timeouts.errorMessageDelete)
         })
       }
     })
@@ -74,17 +74,17 @@ commands.vote = {
 commands.submit = {
   adminOnly: false,
   modOnly: false,
-  fn: function (bot, msg, suffix, uvClient, cBack) {
+  fn: (bot, msg, suffix, uvClient, cBack) => {
     let channels = require('../../channels')
     let IDs = Object.getOwnPropertyNames(channels)
     if (IDs.indexOf(msg.channel.id) === -1) return
     let content = suffix.split(' | ')
     if (content.length !== 2) {
       msg.reply('This command only takes 2 arguments').then(errmsg => {
-        setTimeout(() => bot.Messages.deleteMessages([msg, errmsg]), config.timeouts.errorMessageDelete)
+        setTimeout(() => msg.channel.bulkDelete([msg, errmsg]), config.timeouts.errorMessageDelete)
       })
     } else {
-      msg.channel.sendTyping()
+      msg.channel.startTyping()
       getMail(uvClient, msg.author.id).then(email => {
         uvClient.v1.loginAs(email).then(c => {
           c.post(`forums/${config.uservoice.forumId}/suggestions.json`, {
@@ -95,11 +95,11 @@ commands.submit = {
               category_id: channels[msg.channel.id]
             }
           }).then(data => {
-            msg.reply('your feedback has been submitted!', false, {
+            msg.reply('your feedback has been submitted!', , { embed: {
               color: 0x3498db,
               author: {
                 name: entities.decode(data.suggestion.creator.name),
-                icon_url: data.suggestion.creator.avatar_url,
+                iconURL: data.suggestion.creator.avatar_url,
                 url: data.suggestion.creator.url
               },
               title: entities.decode(data.suggestion.title),
@@ -108,9 +108,7 @@ commands.submit = {
               footer: {
                 text: entities.decode(data.suggestion.category.name)
               }
-            }).then(successmsg => {
-              setTimeout(() => bot.Messages.deleteMessages([msg]), config.timeouts.messageDelete)
-            })
+            }}).then(successmsg => msg.delete(config.timeouts.messageDelete))
             cBack({
               result: data.suggestion.url
             })
@@ -120,7 +118,7 @@ commands.submit = {
               message: (e.message !== undefined) ? e.message : JSON.stringify(e)
             }, e)
             msg.reply('an error occured, please try again later.').then(errmsg => {
-              setTimeout(() => bot.Messages.deleteMessages([msg, errmsg]), config.timeouts.errorMessageDelete)
+              setTimeout(() => msg.channel.bulkDelete([msg, errmsg]), config.timeouts.errorMessageDelete)
             })
           })
         }).catch(e => {
@@ -129,13 +127,13 @@ commands.submit = {
             message: (e.message !== undefined) ? e.message : JSON.stringify(e)
           }, e)
           msg.reply('an error occured, please try again later.').then(errmsg => {
-            setTimeout(() => bot.Messages.deleteMessages([msg, errmsg]), config.timeouts.errorMessageDelete)
+            setTimeout(() => msg.channel.bulkDelete([msg, errmsg]), config.timeouts.errorMessageDelete)
           })
         })
       }).catch(e => {
         if (e === 'Not found') {
           msg.reply(`I was unable to find your details, make sure you've logged into the website at <https://${config.uservoice.subdomain}.${config.uservoice.domain}> at least once.`).then(errmsg => {
-            setTimeout(() => bot.Messages.deleteMessages([msg, errmsg]), config.timeouts.errorMessageDelete)
+            setTimeout(() => msg.channel.bulkDelete([msg, errmsg]), config.timeouts.errorMessageDelete)
           })
         } else {
           logger.log(bot, {
@@ -143,7 +141,7 @@ commands.submit = {
             message: (e.message !== undefined) ? e.message : JSON.stringify(e)
           }, e)
           msg.reply('an error occured, please try again later.').then(errmsg => {
-            setTimeout(() => bot.Messages.deleteMessages([msg, errmsg]), config.timeouts.errorMessageDelete)
+            setTimeout(() => msg.channel.bulkDelete([msg, errmsg]), config.timeouts.errorMessageDelete)
           })
         }
       })
@@ -154,8 +152,8 @@ commands.submit = {
 commands.comment = {
   adminOnly: false,
   modOnly: false,
-  fn: function (bot, msg, suffix, uvClient, cBack) {
-    msg.channel.sendTyping()
+  fn: (bot, msg, suffix, uvClient, cBack) => {
+    msg.channel.startTyping()
     getMail(uvClient, msg.author.id).then(email => {
       uvClient.v1.loginAs(email).then(c => {
         let s = suffix.split(' ')
@@ -175,7 +173,7 @@ commands.comment = {
             text: content
           }
         }).then(data => {
-          msg.reply('your comment was added.', false, {
+          msg.reply('your comment was added.', false, { embed: {
             title: entities.decode(data.comment.suggestion.title),
             url: data.comment.suggestion.url,
             description: (data.comment.suggestion.text !== null) ? ((data.comment.suggestion.text.length < 1900) ? entities.decode(data.comment.suggestion.text) : '*Content too long*') : '*No content*',
@@ -183,7 +181,7 @@ commands.comment = {
             author: {
               name: entities.decode(data.comment.suggestion.creator.name),
               url: data.comment.suggestion.creator.url,
-              icon_url: data.comment.suggestion.creator.avatar_url
+              iconURL: data.comment.suggestion.creator.avatar_url
             },
             fields: [
               {
@@ -192,9 +190,7 @@ commands.comment = {
                 inline: false
               }
             ]
-          }).then(successmsg => {
-            setTimeout(() => bot.Messages.deleteMessages([msg]), config.timeouts.messageDelete)
-          })
+          }}).then(successmsg => msg.delete(config.timeouts.messageDelete)
           cBack({
             affected: id,
             result: 'A new comment was created'
@@ -202,7 +198,7 @@ commands.comment = {
         }).catch(e => {
           if (e.statusCode === 404) {
             msg.reply('unable to find a suggestion using your query.').then(errmsg => {
-              setTimeout(() => bot.Messages.deleteMessages([msg, errmsg]), config.timeouts.errorMessageDelete)
+              setTimeout(() => msg.channel.bulkDelete([msg, errmsg]), config.timeouts.errorMessageDelete)
             })
           } else {
             logger.log(bot, {
@@ -210,7 +206,7 @@ commands.comment = {
               message: (e.message !== undefined) ? e.message : JSON.stringify(e)
             }, e)
             msg.reply('an error occured, please try again later.').then(errmsg => {
-              setTimeout(() => bot.Messages.deleteMessages([msg, errmsg]), config.timeouts.errorMessageDelete)
+              setTimeout(() => msg.channel.bulkDelete([msg, errmsg]), config.timeouts.errorMessageDelete)
             })
           }
         })
@@ -220,13 +216,13 @@ commands.comment = {
           message: (e.message !== undefined) ? e.message : JSON.stringify(e)
         }, e)
         msg.reply('an error occured, please try again later.').then(errmsg => {
-          setTimeout(() => bot.Messages.deleteMessages([msg, errmsg]), config.timeouts.errorMessageDelete)
+          setTimeout(() => msg.channel.bulkDelete([msg, errmsg]), config.timeouts.errorMessageDelete)
         })
       })
     }).catch(e => {
       if (e === 'Not found') {
         msg.reply(`I was unable to find your details, make sure you've logged into the website at <https://${config.uservoice.subdomain}.${config.uservoice.domain}> at least once.`).then(errmsg => {
-          setTimeout(() => bot.Messages.deleteMessages([msg, errmsg]), config.timeouts.errorMessageDelete)
+          setTimeout(() => msg.channel.bulkDelete([msg, errmsg]), config.timeouts.errorMessageDelete)
         })
       } else {
         logger.log(bot, {
@@ -234,7 +230,7 @@ commands.comment = {
           message: (e.message !== undefined) ? e.message : JSON.stringify(e)
         }, e)
         msg.reply('an error occured, please try again later.').then(errmsg => {
-          setTimeout(() => bot.Messages.deleteMessages([msg, errmsg]), config.timeouts.errorMessageDelete)
+          setTimeout(() => msg.channel.bulkDelete([msg, errmsg]), config.timeouts.errorMessageDelete)
         })
       }
     })
@@ -243,27 +239,28 @@ commands.comment = {
 commands.url = {
   adminOnly: false,
   modOnly: false,
-  fn: function (bot, msg, suffix) {
+  fn: (bot, msg, suffix) => {
     if (suffix) {
       let id = suffix.match(/[0-9]{7,}/)[0]
       if (id) msg.reply(`Here's the link: https://${config.uservoice.subdomain}.${config.uservoice.domain}/forums/${config.uservoice.forumId}/suggestions/${suffix}`)
       else msg.reply(`Please enter a Suggestion ID.`)
+    } else {
+      msg.reply(`URL for the Feedback page is https://${config.uservoice.subdomain}.${config.uservoice.domain}, though that's probably not what you were looking for. Try entering a Suggestion ID`)
     }
-    else msg.reply(`URL for the Feedback page is https://${config.uservoice.subdomain}.${config.uservoice.domain}, though that's probably not what you were looking for. Try entering a Suggestion ID`)
   }
 }
 
 commands.info = {
   modOnly: false,
   adminOnly: false,
-  fn: function (bot, msg, suffix, uvClient, cBack) {
+  fn: (bot, msg, suffix, uvClient, cBack) => {
     function getInfo (uvid, userid) {
       uvClient.v1.loginAsOwner().then(c => {
         c.get(`users/${uvid}.json`).then(data => {
           let dcuser = '*Cannot grab user.*'
-          let member = msg.guild.members.find(member => userid === member.id)
+          let member = msg.guild.members.get(userid)
           if (member) { // Search server for a member with that DCID and return a NAME#DISCRIM
-            dcuser = `${member.username}#${member.discriminator}`
+            dcuser = member.user.tag
           }
           let latestSuggTitle = 'No suggestion available'
           let latestSuggLink
@@ -273,7 +270,7 @@ commands.info = {
           }).then(response => {
             latestSuggLink = response.suggestions[0].url
             latestSuggTitle = response.suggestions[0].title
-            return msg.channel.sendMessage(`Information for User ${data.user.name}:`, false, {
+            return msg.channel.send(`Information for User ${data.user.name}:`, { embed: {
               color: 0xfc9822,
               title: `${data.user.name} - UserVoice`,
               description: `UserVoice ID: ${data.user.id}`,
@@ -304,36 +301,36 @@ commands.info = {
               ],
               footer: {
                 text: 'User created on',
-                icon_url: data.user.avatar_url
+                iconURL: data.user.avatar_url
               },
               timestamp: new Date(data.user.created_at)
-            })
+            }})
           }).catch(logger.raven)
         }).catch(() => {
-          return msg.channel.sendMessage('User could not be found on UserVoice, make sure they have logged into the Feedback site at least once.').then(errMsg => {
-            setTimeout(() => bot.Messages.deleteMessages([msg, errMsg]), config.timeouts.errorMessageDelete)
+          return msg.channel.send('User could not be found on UserVoice, make sure they have logged into the Feedback site at least once.').then(errMsg => {
+            setTimeout(() => msg.channel.bulkDelete([msg, errMsg]), config.timeouts.errorMessageDelete)
           })
         })
       })
     }
     
-    msg.channel.sendTyping()
-    let mentions = msg.mentions
+    msg.channel.startTyping()
+    let mentions = msg.mentions.members
     let userid
     let uvid
 
-    if (mentions.length !== 0) {
-      userid = mentions[0].id // Mention given? Convert to User ID
+    if (mentions.size !== 0) {
+      userid = mentions.first().id // Mention given? Convert to User ID
     } else if (suffix.match(/(\d{16,18})/g)) { // User ID given? Set User ID
       userid = suffix.match(/(\d{16,18})/)[1]
     } else if (suffix.match(/(.{2,32}#\d{4})/g)) { // NAME#DISCRIM given? Search for user in server and set User ID
       let namedisc = suffix.match(/(.{2,32})#(\d{4})/g)[0]
-      let member = msg.guild.members.find(member => member.username === namedisc[1] && member.discriminator === namedisc[2])
+      let member = msg.guild.members.find(member => member.user.username === namedisc[1] && member.user.discriminator === namedisc[2])
       if (member) {
         userid = member.id
       } else { // Can't find user by that? Abort mission
         return msg.reply(`Unable to find a user named ${suffix}. The user has to be in this server for using NAME#DISCRIM search. Use a Discord or UserVoice ID.`).then(errMsg => {
-          setTimeout(() => bot.Messages.deleteMessages([msg, errMsg]), config.timeouts.errorMessageDelete)
+          setTimeout(() => msg.channel.bulkDelete([msg, errMsg]), config.timeouts.errorMessageDelete)
         })
       }
     } else if (suffix.match(/(\d{9})/)) {
@@ -341,8 +338,8 @@ commands.info = {
     } else if (!suffix) {
       userid = msg.author.id
     } else {
-      return msg.channel.sendMessage('Invalid usage. Use a mention, ID or Username#Discriminator combination.').then(errMsg => { // crap given? Don't give a crap
-        setTimeout(() => bot.Messages.deleteMessages([msg, errMsg]), config.timeouts.errorMessageDelete)
+      return msg.channel.send('Invalid usage. Use a mention, ID or Username#Discriminator combination.').then(errMsg => { // crap given? Don't give a crap
+        setTimeout(() => msg.channel.bulkDelete([msg, errMsg]), config.timeouts.errorMessageDelete)
       })
     }
 
@@ -356,13 +353,13 @@ commands.info = {
               let id = data.users[0].id
               getInfo(id, userid, null)
             } else {
-              return msg.channel.sendMessage('User could not be found on UserVoice, make sure they have logged into the Feedback site at least once.').then(errMsg => {
-                setTimeout(() => bot.Messages.deleteMessages([msg, errMsg]), config.timeouts.errorMessageDelete)
+              return msg.channel.send('User could not be found on UserVoice, make sure they have logged into the Feedback site at least once.').then(errMsg => {
+                setTimeout(() => msg.channel.bulkDelete([msg, errMsg]), config.timeouts.errorMessageDelete)
               })
             }
           }).catch(() => {
-            return msg.channel.sendMessage('Failed to find a suitable result using that input.').then(errMsg => {
-              setTimeout(() => bot.Messages.deleteMessages([msg, errMsg]), config.timeouts.errorMessageDelete)
+            return msg.channel.send('Failed to find a suitable result using that input.').then(errMsg => {
+              setTimeout(() => msg.channel.bulkDelete([msg, errMsg]), config.timeouts.errorMessageDelete)
             })
           })
         })
@@ -373,8 +370,8 @@ commands.info = {
             let id = avatar.match(/https?:\/\/[\w.]+\/avatars\/(\d+)\/.+/) // Grab userid from Avatar URL
             getInfo(uvid, id[1])
           }).catch(() => {
-            return msg.channel.sendMessage('Failed to find a suitable result using that input.').then(errMsg => {
-              setTimeout(() => bot.Messages.deleteMessages([msg, errMsg]), config.timeouts.errorMessageDelete)
+            return msg.channel.send('Failed to find a suitable result using that input.').then(errMsg => {
+              setTimeout(() => msg.channel.bulkDelete([msg, errMsg]), config.timeouts.errorMessageDelete)
             })
           })
         })
@@ -384,7 +381,7 @@ commands.info = {
 }
 
 function getMail (uv, user) {
-  return new Promise(function (resolve, reject) {
+  return new Promise((resolve, reject) => {
     if (config.debug === true) return resolve('hello@dougley.com') // no dox pls
     uv.v1.loginAsOwner().then(i => {
       i.get('users/search.json', {
